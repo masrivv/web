@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pendukung Keputusan - SAW Method</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        body.dark-mode {
+            background-color: #1a202c;
+            color: #cbd5e0;
+        }
+        body.dark-mode .dark-theme {
+            background-color: #2d3748;
+            color: #cbd5e0;
+        }
+        body.dark-mode .dark-theme input {
+            background-color: #4a5568;
+            color: #cbd5e0;
+        }
+        body.dark-mode .dark-theme button {
+            background-color: #3182ce;
+            color: #cbd5e0;
+        }
+        body.dark-mode .result-box {
+            background-color: #2d3748;
+            color: #cbd5e0;
+        }
+        body.light-mode .result-box {
+            background-color: #ffffff;
+            color: #1a202c;
+        }
+    </style>
+    <script>
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            document.body.classList.toggle('light-mode');
+            const themeButtonIcon = document.getElementById('themeToggleButtonIcon');
+            if (document.body.classList.contains('dark-mode')) {
+                themeButtonIcon.classList.remove('fa-moon');
+                themeButtonIcon.classList.add('fa-sun');
+            } else {
+                themeButtonIcon.classList.remove('fa-sun');
+                themeButtonIcon.classList.add('fa-moon');
+            }
+        }
+
+        function calculateSAW() {
+            const A = parseInt(document.getElementById('alternatives').value);
+            const C = parseInt(document.getElementById('criteria').value);
+            const kriteria = [];
+            const bobot = [];
+            const matriks = [];
+            
+            for (let i = 0; i < C; i++) {
+                kriteria.push(document.getElementById(`jenis${i}`).value);
+                bobot.push(parseFloat(document.getElementById(`bobot${i}`).value));
+            }
+
+            for (let i = 0; i < A; i++) {
+                const nilai_alternatif = [];
+                for (let j = 0; j < C; j++) {
+                    nilai_alternatif.push(parseFloat(document.getElementById(`nilai${i}${j}`).value));
+                }
+                matriks.push(nilai_alternatif);
+            }
+
+            const matriks_ternormalisasi = [];
+            for (let j = 0; j < C; j++) {
+                const kolom = matriks.map(row => row[j]);
+                const max = Math.max(...kolom);
+                const min = Math.min(...kolom);
+                const norm = kriteria[j] === 'benefit'
+                    ? kolom.map(x => x / max)
+                    : kolom.map(x => min / x);
+                
+                for (let i = 0; i < A; i++) {
+                    matriks_ternormalisasi[i] = matriks_ternormalisasi[i] || [];
+                    matriks_ternormalisasi[i][j] = norm[i];
+                }
+            }
+
+            const skala_prioritas = matriks_ternormalisasi.map(row =>
+                row.reduce((sum, val, j) => sum + val * bobot[j], 0)
+            );
+
+            let hasil = '';
+            for (let i = 0; i < A; i++) {
+                hasil += `Alternatif ke-${i + 1}: ${skala_prioritas[i]}<br>`;
+            }
+
+            const terbaik = skala_prioritas.indexOf(Math.max(...skala_prioritas)) + 1;
+            hasil += `<br>Alternatif terbaik adalah Alternatif ke-${terbaik}`;
+            
+            document.getElementById('result').innerHTML = hasil;
+        }
+
+        function generateKriteriaInputs() {
+            const C = parseInt(document.getElementById('criteria').value);
+            const kriteriaInputs = document.getElementById('kriteriaInputs');
+            kriteriaInputs.innerHTML = '';
+            for (let i = 0; i < C; i++) {
+                kriteriaInputs.innerHTML += `<div class="mb-4">
+                    <label class="block">Jenis Kriteria ke-${i + 1} (benefit/cost):</label>
+                    <input type="text" id="jenis${i}" class="border rounded w-full py-2 px-3 dark-theme" required>
+                    <label class="block mt-2">Bobot Kriteria ke-${i + 1}:</label>
+                    <input type="number" step="0.01" id="bobot${i}" class="border rounded w-full py-2 px-3 dark-theme" required>
+                </div>`;
+            }
+        }
+
+        function generateNilaiInputs() {
+            const A = parseInt(document.getElementById('alternatives').value);
+            const C = parseInt(document.getElementById('criteria').value);
+            const nilaiInputs = document.getElementById('nilaiInputs');
+            nilaiInputs.innerHTML = '';
+            for (let i = 0; i < A; i++) {
+                nilaiInputs.innerHTML += `<h3 class="text-lg font-semibold mt-4">Nilai untuk Alternatif ke-${i + 1}:</h3>`;
+                for (let j = 0; j < C; j++) {
+                    nilaiInputs.innerHTML += `<div class="mb-2">
+                        <label class="block">Kriteria ke-${j + 1}:</label>
+                        <input type="number" step="0.01" id="nilai${i}${j}" class="border rounded w-full py-2 px-3 dark-theme" required>
+                    </div>`;
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 text-gray-900 light-mode">
+    <div class="container mx-auto p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Decision Support System- SAW Method</h2>
+            <button onclick="toggleDarkMode()" class="bg-yellow-500 text-white py-2 px-4 rounded">
+                <i id="themeToggleButtonIcon" class="fas fa-moon"></i>
+            </button>
+        </div>
+        <form onsubmit="calculateSAW(); return false;" class="dark-theme p-6 rounded">
+            <div class="mb-4">
+                <label class="block">Jumlah Alternatif:</label>
+                <input type="number" id="alternatives" class="border rounded w-full py-2 px-3 dark-theme" required>
+            </div>
+            <div class="mb-4">
+                <label class="block">Jumlah Kriteria:</label>
+                <input type="number" id="criteria" class="border rounded w-full py-2 px-3 dark-theme" required>
+            </div>
+            <div id="kriteriaInputs" class="mb-4"></div>
+            <button type="button" onclick="generateKriteriaInputs()" class="bg-blue-500 text-white py-2 px-4 rounded mb-4">Input Kriteria</button>
+            <div id="nilaiInputs" class="mb-4"></div>
+            <button type="button" onclick="generateNilaiInputs()" class="bg-blue-500 text-white py-2 px-4 rounded mb-4">Input Nilai</button>
+            <button type="submit" class="bg-green-500 text-white py-2 px-4 rounded">Hitung</button>
+        </form>
+        <div id="result" class="mt-6 p-4 rounded shadow result-box"></div>
+    </div>
+</body>
+</html>
